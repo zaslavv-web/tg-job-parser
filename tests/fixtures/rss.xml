@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Вакансии: продакт-менеджмент</title>
+  <link>https://jobs.example.com</link>
+  <item>
+    <title>Lead Product Manager (AI-платформа)</title>
+    <link>https://jobs.example.com/vacancy/777</link>
+    <guid>https://jobs.example.com/vacancy/777</guid>
+    <pubDate>Thu, 24 Sep 2026 10:00:00 +0300</pubDate>
+    <description><![CDATA[<p>Компания: Neuro Labs</p><p>Удалённо. Строим LLM-продукт для enterprise, B2B.</p><p>Зарплата от 5000 $</p>]]></description>
+  </item>
+  <item>
+    <title>QA Engineer</title>
+    <link>https://jobs.example.com/vacancy/778</link>
+    <guid>https://jobs.example.com/vacancy/778</guid>
+    <pubDate>Thu, 24 Sep 2026 11:00:00 +0300</pubDate>
+    <description><![CDATA[Тестирование мобильного приложения. Офис Москва.]]></description>
+  </item>
+</channel>
+</rss>

@@ -1,0 +1,8 @@
+/vendor/
+/var/db/*
+!/var/db/.gitkeep
+/var/log/*
+!/var/log/.gitkeep
+/var/run/
+/var/telethon/
+.env

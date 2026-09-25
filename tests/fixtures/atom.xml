@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Remote Product Jobs</title>
+  <entry>
+    <title>Director of Product</title>
+    <id>tag:jobs,2026:1</id>
+    <link rel="alternate" href="https://remote.example.org/jobs/1"/>
+    <published>2026-09-23T08:00:00Z</published>
+    <summary>Fully remote. Fintech payments platform, own the P&amp;L.</summary>
+  </entry>
+</feed>

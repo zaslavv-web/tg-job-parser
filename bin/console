@@ -1,0 +1,12 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/bootstrap.php';
+
+use TgJobParser\Cli\Console;
+use TgJobParser\Kernel\App;
+
+$app = App::boot(dirname(__DIR__));
+exit((new Console($app))->run($argv));

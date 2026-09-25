@@ -1,0 +1,123 @@
+# tg-job-parser — радар вакансий с сопроводительными письмами
+
+## Назначение
+Локальный PHP-сервис по ТЗ «Парсер вакансий из Telegram-каналов с генерацией сопроводительных писем» (25.09.2026).
+Подключает Telegram-каналы, RSS-ленты и сайты с вакансиями, фильтрует посты по профилю кандидата,
+считает скоринг 0–100 и для подходящих вакансий готовит ссылку и сопроводительное письмо (RU/EN).
+
+Стек: PHP 8.2+, без фреймворка и без обязательных зависимостей; SQLite по умолчанию (MySQL через `DB_DSN`).
+
+## Быстрый старт
+```bash
+cd services/tg-job-parser
+cp .env.example .env            # по желанию: ключи AI, Telethon, бот уведомлений
+php bin/console migrate         # схема БД (веб-интерфейс тоже применяет миграции сам)
+php bin/console seed            # каналы из раздела 10 ТЗ
+php -S 127.0.0.1:8080 -t public public/index.php
+# открыть http://127.0.0.1:8080 → «Проверить все каналы»
+```
+Автопарсинг (этап 8): `* * * * * cd /path/services/tg-job-parser && php bin/console cron`.
+Команда сама решает, пора ли запускаться; интервал (30 мин по умолчанию) и вкл/выкл меняются в UI.
+
+AI-режим писем (этап 6): `composer require anthropic-ai/sdk guzzlehttp/guzzle` + `CLAUDE_API_KEY` в `.env`.
+Без этого сервис работает в шаблонном режиме — это штатное поведение, а не ошибка.
+
+## Архитектура: как вносить изменения, не ломая сервис
+
+```text
+ источник ──► драйвер ──► RawPost ──► обогатители ──► шаги фильтра ──► скоринг ──► статус
+ (tg/rss/web)  (плагин)   (общий       (язык, заголовок,  (цепочка 3.3,    (правила-   │
+                           формат)      компания, ссылка)  порядок в конфиге) данные)    ▼
+                                                                    событие post.classified
+                                                                      ├─ AutoLetterListener → письмо
+                                                                      └─ (ваш подписчик)
+```
+
+Правило одно: **ядро не знает о конкретных модулях**. Всё подключается строкой в конфиге.
+
+| Хочу… | Что делать | Файл |
+|---|---|---|
+| Новое ключевое слово / локацию / должность | Кнопка «+» в разделе «Параметры поиска» (без деплоя) или строка в списке | UI или `config/profile.php` |
+| Требование к письму | «Требования к сопроводительному письму» в UI (строка с «+» — дословно в шаблон) | UI |
+| Изменить баллы скоринга | Поменять `points` у правила | `config/pipeline.php` |
+| Новое правило скоринга | Строка типа `keywords` / `regex` / `list` | `config/pipeline.php` |
+| Новый тип правила | Класс `Scoring\ScoringRuleInterface` + строка в `scoring_rule_types` | `config/modules.php` |
+| Новый шаг фильтра / поменять порядок | Класс `Filter\FilterStepInterface` + строка в `filter_steps` и место в `steps` | `modules.php`, `pipeline.php` |
+| Новый источник (HH API, LinkedIn, почта…) | Класс `Source\SourceDriverInterface` + строка в `source_drivers` | `modules.php` |
+| Новый AI-провайдер | Класс `Letter\Generator\LetterGeneratorInterface` + строка в `letter_generators` | `modules.php` |
+| Реакция на событие (Slack, e-mail, CRM) | Класс `Kernel\ListenerInterface` + строка в `listeners` | `modules.php` |
+| Текст шаблонного письма | Фразы | `templates/letters/{ru,en}.php` |
+| Промпт AI | Текст с плейсхолдерами | `templates/prompts/cover_letter.txt` |
+| Приоритет ссылок на вакансию | Регулярки хостов/путей | `config/pipeline.php → link_strategies` |
+| Новая колонка / таблица | Новый файл `migrations/NNN_*.php` (старые не трогать) | `migrations/` |
+| Новая страница / эндпоинт | Строка маршрута + метод контроллера | `config/routes.php` |
+
+После изменения правил: сохранённые посты пересчитываются автоматически (из UI) или `php bin/console rescore`.
+Ручные решения пользователя («Отклонить», «Пересмотреть») переживают пересчёт.
+
+### Гарантии стабильности
+- **Изоляция отказов.** Упал источник — у него статус «ошибка» с текстом причины, остальные парсятся. Упал пост — пропущен, остальные обработаны. Упал шаг фильтра — политика `on_error` (`continue` / `reject`). Упало правило скоринга — пропущено. Упал подписчик события — залогирован, остальные работают.
+- **Деградация AI.** Нет ключа/SDK, сеть, лимит, отказ модели, письмо не прошло проверку → шаблонное письмо с пометкой причины. Пользователь всегда получает письмо.
+- **Проверка писем (LetterGuard).** Лимит слов, запрет клише и «18+ лет опыта», AI-письмо с цифрами не из резюме и вакансии отбрасывается, контакты дописываются, если их нет.
+- **Идемпотентность.** Повторный парсинг не дублирует посты и письма (`UNIQUE(source_id, external_id)`); курсор канала двигается только после успешной обработки.
+- **Без гонок.** Cron и кнопка не запускают парсинг одновременно (lock-файл, снимается ОС при падении процесса).
+- **Миграции** версионированы, каждая в своей транзакции; веб-вход догоняет схему сам.
+- **Контрактные тесты** (`tests/Integration/ModuleContractsTest.php`) валят сборку, если конфиг ссылается на несуществующий класс, шаг, список, маршрут или содержит битый regex — ошибка ловится до деплоя, а не в проде.
+- Правки пользователя хранятся **дельтой** к `config/profile.php` (добавлено/скрыто), поэтому обновление конфига в репозитории не затирает их, и наоборот.
+
+## Структура
+```text
+bin/console              CLI: migrate, parse, cron, rescore, sources, seed, letter, health
+bootstrap.php            автозагрузка (vendor/ если есть, иначе встроенный PSR-4)
+config/                  app.php (техническое), profile.php (ТЗ §2), pipeline.php (§3.3, 3.4, 6), modules.php (реестр), routes.php
+migrations/              версионированная схема
+public/                  index.php (фронт-контроллер), assets/
+scripts/telethon_parser.py  приватные каналы (ТЗ 4.1, вариант B), контракт — JSON в stdout
+src/Kernel               App (корень композиции), Container, Config, EventDispatcher, логгер
+src/Source               SourceDriverInterface, реестр, драйверы telegram / telethon / rss / web
+src/Enricher             язык, заголовок, компания, формат работы, ссылка на вакансию
+src/Filter               VacancyContext, Pipeline, шаги 1–6
+src/Scoring              правила (list / keywords / regex), Scorer, RuleFactory
+src/Letter               генераторы (template / claude / openai), CaseSelector, PromptBuilder, LetterGuard, LetterService
+src/Application          ParseService, ClassificationService, RescoreService, SourceService, HealthCheck
+src/Web                  роутер, контроллеры, сессия/CSRF, шаблоны в templates/
+tests/                   php tests/run.php — без зависимостей
+```
+
+## Хранилище (ТЗ 4.3)
+| ТЗ | Здесь | Отличие |
+|---|---|---|
+| `channels` | `sources` | + `kind` (telegram/telethon/rss/web), `options` (JSON), `status`, `last_error` — ради раздела 6 ТЗ |
+| `vacancy_links` | `posts` | + `external_id`, `links`, `buttons`, `title`, `company`, `work_format`, `language`, `vacancy_url`, `reasons`, `trace`, `manual_status` |
+| `cover_letters` | `cover_letters` | + `note` (почему сработал фолбэк) |
+| `settings(key, value)` | `settings(name, value)` | `key` — зарезервированное слово MySQL; значения в JSON |
+| — | `parse_runs` | журнал запусков для UI и cron |
+
+## Переменные окружения
+См. `.env.example`: `DB_DSN`, `LETTER_MODE`, `CLAUDE_API_KEY`, `CLAUDE_MODEL` (по умолчанию `claude-opus-5`),
+`OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL`, `TG_API_ID`, `TG_API_HASH`, `TG_SESSION`,
+`NOTIFY_TELEGRAM_BOT_TOKEN`, `NOTIFY_TELEGRAM_CHAT_ID`, `APP_PASSWORD` (HTTP Basic для UI).
+
+## Эндпоинты
+- `GET /` — интерфейс (разделы 1–6 ТЗ).
+- `GET /api/vacancies?show[]=recommended&period=week&min_score=50` — подходящие вакансии с письмами (JSON).
+- `GET /api/health` — самодиагностика (503, если не работает критичное).
+- POST-формы UI защищены CSRF.
+
+## Тесты
+```bash
+php tests/run.php            # все
+php tests/run.php Letter     # по подстроке имени
+```
+Покрыто: сопоставление шаблонов, каждый шаг цепочки 3.3 и баллы 3.4, приоритет ссылок (§6), разбор t.me/s
+(пагинация, инкремент, закрытые каналы), RSS/Atom, сайты (JSON-LD, эвристика ссылок, XPath), контракт Telethon,
+письма (структура, лимит, язык, только факты, фолбэки AI), сквозной парсинг с отказом источника, идемпотентность,
+блокировка, ручные решения при пересчёте, веб-интерфейс, CSRF, Basic-авторизация, контракты модулей.
+
+## Отступления от ТЗ и решения
+- Модель Claude по умолчанию — `claude-opus-5` (в ТЗ указан снапшот 2025 года); меняется через `CLAUDE_MODEL`. Запрос идёт с серверным фолбэком на другую модель при отказе основной.
+- Лимит длины: шаблон ≤130 слов (цель 90–120), AI ≤200 слов (как в промпте §9).
+- Шаг 2: вакансия без целевой должности отклоняется флагом `require_target_role` (включён; выключается в UI).
+- «Только офис» не отклоняется географией — решает скоринг (−25 за Москву без удалёнки по §3.4); гибрид вне списка городов отклоняется.
+- AdTech и геймдев отклоняются (`action: reject`), «консалтинг без продукта» — только штраф −30; меняется в `profile.php`.
+- Анти-должности проверяются по заголовку вакансии, чтобы «в команде 5 backend-разработчиков» не отклоняло вакансию продакта.

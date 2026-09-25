@@ -1,0 +1,36 @@
+{
+    "name": "growthpeak/tg-job-parser",
+    "description": "Парсер вакансий из Telegram-каналов и сайтов с генерацией сопроводительных писем",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*",
+        "ext-dom": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*"
+    },
+    "suggest": {
+        "anthropic-ai/sdk": "AI-генерация писем через Claude API (режим 'claude')",
+        "guzzlehttp/guzzle": "PSR-18 HTTP-клиент, нужен anthropic-ai/sdk",
+        "ext-curl": "HTTP-клиент для парсинга t.me/s, RSS и сайтов",
+        "ext-pdo_sqlite": "Хранилище по умолчанию"
+    },
+    "autoload": {
+        "psr-4": {
+            "TgJobParser\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "TgJobParser\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "php tests/run.php",
+        "migrate": "php bin/console migrate"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
