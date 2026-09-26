@@ -5,7 +5,7 @@
 
 ## Установка — один файл, запуск с рабочего стола
 
-1. Скачайте файл для своей системы в разделе **Releases** (или во вкладке Actions → последняя сборка → `executables`):
+1. Скачайте файл для своей системы в разделе **Releases** (новая версия выпускается автоматически при изменении файла `VERSION` в `main`) (или во вкладке Actions → последняя сборка → `executables`):
    - Windows — `TgJobParser.exe`
    - macOS (M1–M4) — `TgJobParser-macos-arm64.zip`, Intel — `TgJobParser-macos-x64.zip`
    - Linux — `TgJobParser-linux-x64.zip`

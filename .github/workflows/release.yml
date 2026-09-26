@@ -1,7 +1,8 @@
 name: Build desktop app
 
 # Сборка единого исполняемого файла под Windows / macOS / Linux.
-# Каждый пуш — артефакты в Actions; тег v* — ещё и GitHub Release с файлами.
+# Каждый пуш — артефакты в Actions. Пуш в main — GitHub Release v<VERSION>
+# (тег создаётся автоматически; чтобы выпустить новую версию — поменяйте файл VERSION).
 on:
   push:
     branches: ["**"]
@@ -98,10 +99,14 @@ jobs:
 
   release:
     name: GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     needs: verify
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - name: Версия
+        id: version
+        run: echo "tag=v$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
           name: executables
@@ -112,6 +117,16 @@ jobs:
           for f in TgJobParser-macos-arm64 TgJobParser-macos-x64 TgJobParser-linux-x64; do chmod +x $f && zip -q $f.zip $f; done
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Радар вакансий ${{ steps.version.outputs.tag }}
+          body: |
+            Скачайте файл для своей системы, положите на рабочий стол и запустите двойным кликом.
+            - Windows — `TgJobParser.exe`
+            - macOS (M1–M4) — `TgJobParser-macos-arm64.zip`, Intel — `TgJobParser-macos-x64.zip`
+            - Linux — `TgJobParser-linux-x64.zip`
+
+            Первый запуск: Windows — «Подробнее» → «Выполнить в любом случае»; macOS — правый клик → «Открыть».
           files: |
             out/TgJobParser.exe
             out/*.zip
