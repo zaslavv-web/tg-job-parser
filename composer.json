@@ -5,14 +5,14 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.2",
-        "ext-pdo": "*",
         "ext-dom": "*",
+        "ext-json": "*",
         "ext-mbstring": "*",
-        "ext-json": "*"
+        "ext-pdo": "*",
+        "anthropic-ai/sdk": "^0.51.0",
+        "guzzlehttp/guzzle": "^8.2"
     },
     "suggest": {
-        "anthropic-ai/sdk": "AI-генерация писем через Claude API (режим 'claude')",
-        "guzzlehttp/guzzle": "PSR-18 HTTP-клиент, нужен anthropic-ai/sdk",
         "ext-curl": "HTTP-клиент для парсинга t.me/s, RSS и сайтов",
         "ext-pdo_sqlite": "Хранилище по умолчанию"
     },
@@ -31,6 +31,12 @@
         "migrate": "php bin/console migrate"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.2.0"
+        }
     }
 }

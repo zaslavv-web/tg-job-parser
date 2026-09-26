@@ -61,9 +61,10 @@ final class TelethonDriver implements SourceDriverInterface
         if (($reason = $this->unavailableReason()) !== null) {
             throw new RuntimeException($reason);
         }
+        $script = $this->installScript();
         $command = [
             (string) $this->config->get('telethon.python', 'python3'),
-            (string) $this->config->get('telethon.script'),
+            $script,
             '--channel', $source->handle,
             '--limit', (string) ($options->maxPages * 20),
         ];
@@ -116,6 +117,28 @@ final class TelethonDriver implements SourceDriverInterface
         $cursor = $posts ? end($posts)->externalId : $source->lastPostId;
 
         return new FetchResult($posts, $cursor, isset($data['title']) ? (string) $data['title'] : null);
+    }
+
+    /**
+     * Python не умеет читать файлы изнутри исполняемого файла/phar —
+     * копируем скрипт в каталог данных (и обновляем, если он изменился в новой версии).
+     */
+    private function installScript(): string
+    {
+        $source = (string) $this->config->get('telethon.script_source');
+        $target = (string) $this->config->get('telethon.script');
+        if ($source === '' || $source === $target || !is_file($source)) {
+            return $target ?: $source;
+        }
+        $contents = (string) file_get_contents($source);
+        if (!is_file($target) || (string) file_get_contents($target) !== $contents) {
+            if (!is_dir(dirname($target))) {
+                mkdir(dirname($target), 0775, true);
+            }
+            file_put_contents($target, $contents);
+        }
+
+        return $target;
     }
 
     public function unavailableReason(): ?string

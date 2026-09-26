@@ -2,21 +2,24 @@
 
 /**
  * Технические настройки. Секреты — только из окружения (.env / EnvironmentFile).
- * $env — функция чтения переменной окружения с дефолтом (см. Kernel\Env).
+ * $env  — функция чтения переменной окружения с дефолтом (см. Kernel\Env).
+ * $root — код приложения (может быть внутри исполняемого файла, только чтение).
+ * $data — изменяемые данные: БД, логи, .env (в десктоп-режиме — профиль пользователя).
  */
 return [
     'db' => [
-        'dsn' => $env('DB_DSN') ?: 'sqlite:' . $root . '/var/db/database.sqlite',
+        'dsn' => $env('DB_DSN') ?: 'sqlite:' . $data . '/db/database.sqlite',
         'user' => $env('DB_USER'),
         'password' => $env('DB_PASSWORD'),
     ],
 
     'paths' => [
         'root' => $root,
+        'data' => $data,
         'templates' => $root . '/templates',
         'migrations' => $root . '/migrations',
-        'log' => $root . '/var/log/app.log',
-        'lock' => $root . '/var/run/parse.lock',
+        'log' => $data . '/log/app.log',
+        'lock' => $data . '/run/parse.lock',
     ],
 
     'http' => [
@@ -62,15 +65,29 @@ return [
 
     'telethon' => [
         'python' => $env('TELETHON_PYTHON') ?: 'python3',
-        'script' => $root . '/scripts/telethon_parser.py',
+        'script_source' => $root . '/scripts/telethon_parser.py',   // внутри приложения
+        'script' => $data . '/scripts/telethon_parser.py',          // копия, которую может запустить python
         'api_id' => $env('TG_API_ID'),
         'api_hash' => $env('TG_API_HASH'),
-        'session' => $env('TG_SESSION') ?: $root . '/var/telethon/session',
+        'session' => $env('TG_SESSION') ?: $data . '/telethon/session',
     ],
 
     'notify' => [
         'telegram_bot_token' => $env('NOTIFY_TELEGRAM_BOT_TOKEN'),
         'telegram_chat_id' => $env('NOTIFY_TELEGRAM_CHAT_ID'),
+    ],
+
+    // Что можно настроить из интерфейса (раздел «Подключения»); secret — не показывать значение
+    'editable_env' => [
+        'LETTER_MODE' => ['label' => 'Режим писем по умолчанию (template / claude / openai)', 'secret' => false],
+        'CLAUDE_API_KEY' => ['label' => 'Claude API key', 'secret' => true],
+        'CLAUDE_MODEL' => ['label' => 'Модель Claude', 'secret' => false],
+        'OPENAI_API_KEY' => ['label' => 'OpenAI API key', 'secret' => true],
+        'OPENAI_MODEL' => ['label' => 'Модель OpenAI', 'secret' => false],
+        'NOTIFY_TELEGRAM_BOT_TOKEN' => ['label' => 'Токен Telegram-бота для уведомлений', 'secret' => true],
+        'NOTIFY_TELEGRAM_CHAT_ID' => ['label' => 'Chat ID для уведомлений', 'secret' => false],
+        'TG_API_ID' => ['label' => 'Telethon: api_id (my.telegram.org)', 'secret' => false],
+        'TG_API_HASH' => ['label' => 'Telethon: api_hash', 'secret' => true],
     ],
 
     'web' => [

@@ -25,6 +25,8 @@ return [
     ['POST', '/settings/list/restore', [SettingsController::class, 'restoreItem']],
     ['POST', '/settings/general', [SettingsController::class, 'general']],
     ['POST', '/rescore', [SettingsController::class, 'rescore']],
+    ['POST', '/settings/env', [SettingsController::class, 'env']],
+    ['POST', '/app/shutdown', [SettingsController::class, 'shutdown']],
 
     ['GET', '/api/vacancies', [ApiController::class, 'vacancies']],
     ['GET', '/api/health', [ApiController::class, 'health']],

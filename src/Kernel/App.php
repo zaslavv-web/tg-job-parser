@@ -39,9 +39,9 @@ final class App
      * @param array<string, mixed> $overrides точечные переопределения конфига (тесты, CLI-флаги)
      * @param array<string, \Closure(Container): mixed> $services подмена сервисов (тесты)
      */
-    public static function boot(string $root, array $overrides = [], array $services = []): self
+    public static function boot(string $root, array $overrides = [], array $services = [], ?string $dataDir = null): self
     {
-        $config = self::loadConfig($root);
+        $config = self::loadConfig($root, $dataDir);
         foreach ($overrides as $key => $value) {
             $config = $config->with($key, $value);
         }
@@ -56,12 +56,15 @@ final class App
         return $app;
     }
 
-    public static function loadConfig(string $root): Config
+    /** $dataDir — каталог изменяемых данных (БД, логи, .env); по умолчанию {$root}/var. */
+    public static function loadConfig(string $root, ?string $dataDir = null): Config
     {
-        $envReader = new Env($root . '/.env');
+        $data = $dataDir ?? $root . '/var';
+        // .env из каталога данных важнее .env рядом с кодом
+        $envReader = new Env([$data . '/.env', $root . '/.env']);
         $env = static fn (string $key, ?string $default = null): ?string => $envReader->get($key, $default);
-        $load = static function (string $file) use ($root, $env): array {
-            $value = (static fn (string $__file, string $root, \Closure $env): mixed => require $__file)($file, $root, $env);
+        $load = static function (string $file) use ($root, $data, $env): array {
+            $value = (static fn (string $__file, string $root, string $data, \Closure $env): mixed => require $__file)($file, $root, $data, $env);
             if (!is_array($value)) {
                 throw new UnexpectedValueException("Конфиг {$file} должен возвращать массив");
             }

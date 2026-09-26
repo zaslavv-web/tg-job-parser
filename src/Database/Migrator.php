@@ -53,11 +53,13 @@ final class Migrator
      */
     private function pending(array $applied): array
     {
-        $files = glob($this->directory . '/*.php') ?: [];
+        // scandir, а не glob: glob не работает внутри phar/единого исполняемого файла
+        $files = array_filter(scandir($this->directory) ?: [], static fn (string $f): bool => str_ends_with($f, '.php'));
         sort($files);
         $pending = [];
         foreach ($files as $file) {
             $name = basename($file, '.php');
+            $file = $this->directory . '/' . $file;
             if (!in_array($name, $applied, true)) {
                 $pending[$name] = $file;
             }

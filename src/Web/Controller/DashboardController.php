@@ -62,11 +62,29 @@ final class DashboardController extends BaseController
             'letterModes' => $this->letters->availableModes(),
             'defaultMode' => (string) $this->config->get('letters.mode', 'template'),
             'lastRun' => $this->runs->last(),
+            'connections' => $this->connections(),
+            'dataDir' => (string) $this->config->get('paths.data'),
             'cron' => [
                 'enabled' => (bool) $this->settings->get('cron.enabled', true),
                 'interval' => (int) $this->settings->get('cron.interval_minutes', $this->config->get('parsing.interval_minutes', 30)),
             ],
         ]));
+    }
+
+    /** @return list<array{key: string, label: string, secret: bool, value: string, set: bool}> */
+    private function connections(): array
+    {
+        $result = [];
+        foreach ((array) $this->config->get('editable_env', []) as $key => $meta) {
+            $value = (string) (getenv($key) ?: '');
+            $file = $this->config->get('paths.data') . '/.env';
+            if ($value === '' && is_file($file)) {
+                $value = (string) (\TgJobParser\Kernel\Env::parse((string) file_get_contents($file))[$key] ?? '');
+            }
+            $result[] = ['key' => (string) $key, 'label' => (string) $meta['label'], 'secret' => (bool) ($meta['secret'] ?? false), 'value' => ($meta['secret'] ?? false) ? '' : $value, 'set' => $value !== ''];
+        }
+
+        return $result;
     }
 
     /** @return array{show: list<string>, period: string, min_score: int, source_id: ?int} */

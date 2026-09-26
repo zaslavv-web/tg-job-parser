@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace TgJobParser\Web\Controller;
 
 use TgJobParser\Application\RescoreService;
+use TgJobParser\Kernel\Config;
+use TgJobParser\Kernel\EnvFile;
 use TgJobParser\Profile\ProfileProvider;
 use TgJobParser\Repository\SettingsRepository;
 use TgJobParser\Web\Request;
@@ -22,6 +24,7 @@ final class SettingsController extends BaseController
         private readonly ProfileProvider $profiles,
         private readonly SettingsRepository $settings,
         private readonly RescoreService $rescore,
+        private readonly Config $config,
     ) {
         parent::__construct($session);
     }
@@ -71,6 +74,39 @@ final class SettingsController extends BaseController
         $stats = $this->rescore->rescore();
 
         return $this->done($request, "Пересчитано постов: {$stats['processed']}, подходящих: {$stats['shortlisted']}", $stats, '/#results');
+    }
+
+    /** Ключи API и прочие подключения → .env в каталоге данных. Пустое поле секрета = не менять. */
+    public function env(Request $request): Response
+    {
+        $allowed = (array) $this->config->get('editable_env', []);
+        $values = [];
+        foreach ($allowed as $key => $meta) {
+            if (!array_key_exists($key, $request->post)) {
+                continue;
+            }
+            $value = $request->string($key);
+            if (($meta['secret'] ?? false) && $value === '' && !isset($request->post['clear'][$key])) {
+                continue;
+            }
+            $values[$key] = $value;
+        }
+        if (isset($values['LETTER_MODE']) && !in_array($values['LETTER_MODE'], ['', 'template', 'claude', 'openai'], true)) {
+            throw new \InvalidArgumentException('Режим писем: template, claude или openai');
+        }
+        EnvFile::update($this->config->get('paths.data') . '/.env', $values);
+
+        return $this->done($request, 'Подключения сохранены', [], '/#connections');
+    }
+
+    /** Кнопка «Выключить программу» — десктоп-сервер остановится после ответа. */
+    public function shutdown(Request $request): Response
+    {
+        return new Response(
+            '<!doctype html><meta charset="utf-8"><title>Остановлено</title><body style="font:16px sans-serif;padding:40px">Радар вакансий остановлен. Окно можно закрыть; чтобы снова открыть программу — запустите её двойным кликом.</body>',
+            200,
+            ['Content-Type' => 'text/html; charset=utf-8', 'X-App-Shutdown' => '1'],
+        );
     }
 
     private function afterRulesChange(Request $request, string $message): Response

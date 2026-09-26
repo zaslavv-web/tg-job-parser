@@ -8,19 +8,25 @@
 Стек: PHP 8.2+, без фреймворка и без обязательных зависимостей; SQLite по умолчанию (MySQL через `DB_DSN`).
 
 ## Быстрый старт
-```bash
-cd services/tg-job-parser
-cp .env.example .env            # по желанию: ключи AI, Telethon, бот уведомлений
-php bin/console migrate         # схема БД (веб-интерфейс тоже применяет миграции сам)
-php bin/console seed            # каналы из раздела 10 ТЗ
-php -S 127.0.0.1:8080 -t public public/index.php
-# открыть http://127.0.0.1:8080 → «Проверить все каналы»
-```
-Автопарсинг (этап 8): `* * * * * cd /path/services/tg-job-parser && php bin/console cron`.
-Команда сама решает, пора ли запускаться; интервал (30 мин по умолчанию) и вкл/выкл меняются в UI.
+Пользователю: один исполняемый файл на рабочем столе — см. [`README.md`](./README.md).
 
-AI-режим писем (этап 6): `composer require anthropic-ai/sdk guzzlehttp/guzzle` + `CLAUDE_API_KEY` в `.env`.
-Без этого сервис работает в шаблонном режиме — это штатное поведение, а не ошибка.
+Как это устроено:
+- `app.php` — единая точка входа. Без аргументов — десктоп-режим (`src/Desktop/Launcher.php`):
+  встроенный HTTP-сервер на 127.0.0.1 (`HttpServer`, чистый PHP, не зависит от SAPI), открытие браузера,
+  защита от второго экземпляра, фоновый `cron` дочерним процессом раз в минуту.
+  С аргументами — CLI-команды (`parse`, `cron`, `rescore`, …); `--selftest` — самопроверка сборки.
+- Код приложения доступен только на чтение (внутри исполняемого файла), изменяемые данные — в каталоге данных ОС
+  (`src/Desktop/DataDir.php`; `--data=…`, `TGJP_DATA_DIR` или портативная папка `TgJobParser-data`).
+- Сборка: `build/build-phar.php` упаковывает приложение и `vendor/` в архив, `build/make-executable.sh`
+  склеивает его с рантаймом static-php-cli (micro.sfx) → один файл. Всё это делает `.github/workflows/release.yml`
+  под Windows / macOS / Linux и прогоняет `--selftest` и запуск сервера на каждой ОС; тег `v*` публикует Release.
+- Приложение пересобирается на каждый HTTP-запрос: ключи из раздела «Подключения» (пишутся в `.env` каталога данных)
+  применяются без перезапуска, а состояние одного запроса не протекает в другой.
+
+Серверный вариант по-прежнему доступен: `php -S 127.0.0.1:8080 -t public public/index.php` + `php bin/console cron` в crontab.
+
+AI-режим писем: SDK Claude и Guzzle входят в сборку; достаточно ввести `CLAUDE_API_KEY` в «Подключениях».
+Без ключа сервис работает в шаблонном режиме — это штатное поведение, а не ошибка.
 
 ## Архитектура: как вносить изменения, не ломая сервис
 
@@ -67,7 +73,10 @@ AI-режим писем (этап 6): `composer require anthropic-ai/sdk guzzle
 
 ## Структура
 ```text
-bin/console              CLI: migrate, parse, cron, rescore, sources, seed, letter, health
+app.php                  единая точка входа: десктоп-режим, CLI-команды, --selftest
+bin/console              CLI для серверного варианта
+build/                   сборка архива и единого исполняемого файла
+src/Desktop              встроенный HTTP-сервер, запуск, каталог данных, самопроверка
 bootstrap.php            автозагрузка (vendor/ если есть, иначе встроенный PSR-4)
 config/                  app.php (техническое), profile.php (ТЗ §2), pipeline.php (§3.3, 3.4, 6), modules.php (реестр), routes.php
 migrations/              версионированная схема

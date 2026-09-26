@@ -10,10 +10,13 @@ final class Env
     /** @var array<string, string> */
     private array $fileValues = [];
 
-    public function __construct(?string $dotenvPath = null)
+    /** @param string|list<string>|null $dotenvPaths файлы по убыванию приоритета */
+    public function __construct(string|array|null $dotenvPaths = null)
     {
-        if ($dotenvPath !== null && is_readable($dotenvPath)) {
-            $this->fileValues = self::parse((string) file_get_contents($dotenvPath));
+        foreach (array_reverse((array) $dotenvPaths) as $path) {
+            if (is_string($path) && is_readable($path)) {
+                $this->fileValues = array_merge($this->fileValues, self::parse((string) file_get_contents($path)));
+            }
         }
     }
 

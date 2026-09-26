@@ -71,6 +71,9 @@ input[type=text], input[type=number], select, textarea { font: inherit; color: v
 .add-item input { flex: 1; }
 #settings > form.inline { display: inline-block; margin-top: 16px; }
 footer { padding: 20px 16px 40px; }
+.connections { display: grid; gap: 10px; max-width: 640px; margin-top: 12px; }
+.connections label { display: grid; gap: 4px; }
+.connections label span { font-size: 13px; color: var(--muted); }
 footer span { margin-right: 8px; }
 @media (max-width: 640px) {
     .add-source input[name=input] { min-width: 0; width: 100%; }

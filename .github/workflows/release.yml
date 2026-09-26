@@ -1,0 +1,117 @@
+name: Build desktop app
+
+# Сборка единого исполняемого файла под Windows / macOS / Linux.
+# Каждый пуш — артефакты в Actions; тег v* — ещё и GitHub Release с файлами.
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PHP_SERIES: "8.4"
+  SPC_BASE: https://dl.static-php.dev/static-php-cli
+
+jobs:
+  package:
+    name: Архив приложения + склейка с рантаймом
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, dom, pdo_sqlite, curl, phar
+          ini-values: phar.readonly=0
+          coverage: none
+      - name: Зависимости (без dev)
+        run: composer install --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+      - name: Тесты
+        run: php tests/run.php
+      - name: Архив приложения
+        run: php build/build-phar.php dist/tg-job-parser.phar && php dist/tg-job-parser.phar --selftest
+      - name: Рантаймы static-php-cli (micro)
+        run: |
+          set -euo pipefail
+          mkdir -p runtime && cd runtime
+          # Берём самую свежую сборку PHP ${PHP_SERIES} с набором расширений "common"
+          pick() { curl -fsSL "$1" | grep -oE "$2" | sort -uV | tail -1; }
+          for target in linux-x86_64 macos-aarch64 macos-x86_64; do
+            file=$(pick "$SPC_BASE/common/" "php-${PHP_SERIES}\.[0-9]+-micro-${target}\.tar\.gz")
+            test -n "$file" || { echo "::error::Не найден micro для $target"; exit 1; }
+            echo "$target: $file"
+            mkdir -p $target && curl -fsSL "$SPC_BASE/common/$file" | tar -xz -C $target
+          done
+          file=$(pick "$SPC_BASE/windows/spc-max/" "php-${PHP_SERIES}\.[0-9]+-micro-win\.zip")
+          test -n "$file" || { echo "::error::Не найден micro для Windows"; exit 1; }
+          echo "windows: $file"
+          curl -fsSL "$SPC_BASE/windows/spc-max/$file" -o win.zip && mkdir -p windows && unzip -q win.zip -d windows
+          find . -name 'micro.sfx' -exec ls -la {} \;
+      - name: Единые исполняемые файлы
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          build/make-executable.sh runtime/linux-x86_64/micro.sfx dist/tg-job-parser.phar out/TgJobParser-linux-x64
+          build/make-executable.sh runtime/macos-aarch64/micro.sfx dist/tg-job-parser.phar out/TgJobParser-macos-arm64
+          build/make-executable.sh runtime/macos-x86_64/micro.sfx dist/tg-job-parser.phar out/TgJobParser-macos-x64
+          build/make-executable.sh "$(find runtime/windows -name micro.sfx | head -1)" dist/tg-job-parser.phar out/TgJobParser.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: executables
+          path: out/
+          retention-days: 30
+
+  verify:
+    name: Самопроверка — ${{ matrix.name }}
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-latest, file: TgJobParser-linux-x64 }
+          - { name: macOS (Apple Silicon), os: macos-latest, file: TgJobParser-macos-arm64 }
+          - { name: Windows, os: windows-latest, file: TgJobParser.exe }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: executables
+      - name: --selftest
+        shell: bash
+        run: chmod +x ./${{ matrix.file }} && ./${{ matrix.file }} --selftest
+      - name: Запуск сервера и ответ интерфейса
+        shell: bash
+        run: |
+          DATA="$RUNNER_TEMP/tgjp-data"
+          ./${{ matrix.file }} --no-browser --data="$DATA" > server.log 2>&1 &
+          for i in $(seq 1 20); do
+            sleep 1
+            if curl -fs -o page.html http://127.0.0.1:8765/; then break; fi
+          done
+          cat server.log
+          grep -q "Радар вакансий" page.html
+          curl -fs http://127.0.0.1:8765/api/health
+          ls "$DATA/db"
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: executables
+          path: out
+      - name: Упаковка macOS/Linux (сохранить права на запуск)
+        run: |
+          cd out
+          for f in TgJobParser-macos-arm64 TgJobParser-macos-x64 TgJobParser-linux-x64; do chmod +x $f && zip -q $f.zip $f; done
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/TgJobParser.exe
+            out/*.zip

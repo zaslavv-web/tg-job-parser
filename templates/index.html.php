@@ -95,12 +95,34 @@ $qs = static fn (array $extra = []): string => '?' . http_build_query(array_merg
 
     <!-- Секции 5: параметры поиска и писем -->
     <?= $view->render('partials/settings', compact('lists', 'csrf', 'e', 'profile', 'flagsConfig', 'cron')) ?>
+
+    <!-- Подключения: ключи AI, бот уведомлений, Telethon -->
+    <details class="panel" id="connections">
+        <summary>Подключения (AI, уведомления, Telethon)</summary>
+        <form method="post" action="/settings/env" class="connections">
+            <input type="hidden" name="_token" value="<?= $e($csrf) ?>">
+            <?php foreach ($connections as $c): ?>
+                <label><span><?= $e($c['label']) ?></span>
+                    <input type="<?= $c['secret'] ? 'password' : 'text' ?>" name="<?= $e($c['key']) ?>" value="<?= $e($c['value']) ?>" autocomplete="off"
+                           placeholder="<?= $c['secret'] ? ($c['set'] ? '•••••• задан (оставьте пустым, чтобы не менять)' : 'не задан') : '' ?>">
+                    <?php if ($c['secret'] && $c['set']): ?><small><input type="checkbox" name="clear[<?= $e($c['key']) ?>]" value="1"> удалить</small><?php endif ?>
+                </label>
+            <?php endforeach ?>
+            <button class="btn btn--primary">Сохранить подключения</button>
+            <p class="muted small">Хранится в <code><?= $e($dataDir) ?>/.env</code> на этом компьютере.</p>
+        </form>
+    </details>
 </main>
 <footer class="wrap muted small">Модули писем:
     <?php foreach ($letterModes as $mode => $reason): ?>
         <span title="<?= $e($reason ?? 'готов') ?>"><?= $reason === null ? '●' : '○' ?> <?= $e($mode) ?></span>
     <?php endforeach ?>
     · <a href="/api/health">health</a> · <a href="/api/vacancies">API</a>
+    · данные: <code><?= $e($dataDir) ?></code>
+    <form method="post" action="/app/shutdown" class="inline" data-confirm="Выключить программу? Автопарсинг остановится до следующего запуска.">
+        <input type="hidden" name="_token" value="<?= $e($csrf) ?>">
+        <button class="btn btn--small">⏻ Выключить программу</button>
+    </form>
 </footer>
 <script src="/assets/app.js"></script>
 </body>
