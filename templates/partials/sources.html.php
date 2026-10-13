@@ -19,6 +19,36 @@
             <input type="text" name="link_pattern" placeholder="Regex ссылок на вакансии, напр. ~/jobs/\d+~">
         </details>
     </form>
+    <details class="panel-sub" id="linkedin" open>
+        <summary>🔎 Поиск вакансий в LinkedIn</summary>
+        <form method="post" action="/sources/linkedin" class="linkedin-form">
+            <input type="hidden" name="_token" value="<?= $e($csrf) ?>">
+            <label class="wide"><span>Должности (можно через OR, фразы — в кавычках)</span>
+                <input type="text" name="keywords" required value="&quot;Head of Product&quot; OR CPO OR &quot;Director of Product&quot; OR &quot;Senior Product Manager&quot;"></label>
+            <label><span>Где искать</span>
+                <input type="text" name="location" value="Worldwide" list="linkedin-locations" required>
+                <datalist id="linkedin-locations">
+                    <?php foreach (['Worldwide', 'European Union', 'United States', 'Kazakhstan', 'United Arab Emirates', 'Cyprus', 'Tbilisi', 'Uzbekistan', 'Spain', 'Portugal', 'Czechia', 'Singapore'] as $place): ?>
+                        <option value="<?= $e($place) ?>"></option>
+                    <?php endforeach ?>
+                </datalist></label>
+            <fieldset><legend>Формат</legend>
+                <label><input type="checkbox" name="workplace[]" value="remote" checked> Удалённо</label>
+                <label><input type="checkbox" name="workplace[]" value="hybrid"> Гибрид</label>
+                <label><input type="checkbox" name="workplace[]" value="onsite"> Офис</label>
+            </fieldset>
+            <fieldset><legend>Уровень</legend>
+                <label><input type="checkbox" name="experience[]" value="mid-senior" checked> Mid-Senior</label>
+                <label><input type="checkbox" name="experience[]" value="director" checked> Director</label>
+                <label><input type="checkbox" name="experience[]" value="executive" checked> Executive</label>
+            </fieldset>
+            <label><span>Опубликованы за</span>
+                <select name="posted"><option value="day">сутки</option><option value="week" selected>неделю</option><option value="month">месяц</option></select></label>
+            <button class="btn btn--primary">Добавить поиск LinkedIn</button>
+            <p class="muted small wide">Поиск сохранится как источник и будет проверяться вместе с каналами (автоматически — не чаще раза в 2 часа).
+                Можно и вставить ссылку на поиск с linkedin.com в поле выше. Отбор и письма — по тем же правилам, что для Telegram.</p>
+        </form>
+    </details>
     <form method="post" action="/sources/seed" class="inline seed" data-busy="Подключаю…">
         <input type="hidden" name="_token" value="<?= $e($csrf) ?>">
         <button class="btn btn--small" title="Каналы из ТЗ и поиски LinkedIn по вашему профилю; уже подключённые пропускаются">＋ Подключить рекомендуемые источники</button>

@@ -34,6 +34,27 @@ final class SourceController extends BaseController
         return $this->done($request, "Источник добавлен: {$source->displayName()}", ['id' => $source->id], '/#sources');
     }
 
+    /** Форма «Поиск вакансий в LinkedIn» → ссылка на поиск → источник linkedin. */
+    public function addLinkedIn(Request $request): Response
+    {
+        $list = static fn (mixed $v): string => implode(',', array_filter((array) $v, 'is_string'));
+        $workplace = $list($request->post['workplace'] ?? []);
+        $experience = $list($request->post['experience'] ?? []);
+        if ($workplace === '' || $experience === '') {
+            throw new \InvalidArgumentException('Отметьте хотя бы один формат работы и один уровень');
+        }
+        $url = SeedService::linkedInUrl([
+            'keywords' => $request->string('keywords'),
+            'location' => $request->string('location'),
+            'workplace' => $workplace,
+            'experience' => $experience,
+            'posted' => $request->string('posted', 'week'),
+        ]);
+        $source = $this->sources->add($url, 'linkedin');
+
+        return $this->done($request, "Поиск добавлен: {$source->displayName()}. Нажмите «Проверить все каналы».", ['id' => $source->id], '/#sources');
+    }
+
     public function seed(Request $request): Response
     {
         $result = $this->seeds->seed();

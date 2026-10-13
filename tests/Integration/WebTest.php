@@ -128,4 +128,24 @@ final class WebTest extends TestCase
         $this->assertContains('LinkedIn: ', $page);
         $this->assertContains('@productstar', $page);
     }
+
+    public function testLinkedInSearchForm(): void
+    {
+        $page = $this->kernel->handle(new Request('GET', '/'))->body;
+        $this->assertContains('Поиск вакансий в LinkedIn', $page);
+
+        $this->post('/sources/linkedin', [
+            'keywords' => '"Head of Product" OR CPO', 'location' => 'Kazakhstan',
+            'workplace' => ['remote', 'hybrid'], 'experience' => ['director', 'executive'], 'posted' => 'week',
+        ]);
+        $sources = $this->app->get(SourceRepository::class)->all();
+        $this->assertSame(1, count($sources));
+        $this->assertSame('linkedin', $sources[0]->kind);
+        $this->assertContains('f_WT=2%2C3', (string) $sources[0]->url);
+        $this->assertContains('location=Kazakhstan', (string) $sources[0]->url);
+        $this->assertContains('Поиск добавлен: LinkedIn: &quot;Head of Product&quot; OR CPO · Kazakhstan · Remote/Hybrid · Director/Executive', $this->kernel->handle(new Request('GET', '/'))->body);
+
+        $this->post('/sources/linkedin', ['keywords' => 'PM', 'location' => 'Cyprus', 'experience' => ['director']]);
+        $this->assertContains('Отметьте хотя бы один формат', $this->kernel->handle(new Request('GET', '/'))->body);
+    }
 }
