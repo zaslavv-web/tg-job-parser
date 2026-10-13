@@ -12,6 +12,7 @@ return [
 
     ['POST', '/sources', [SourceController::class, 'add']],
     ['POST', '/sources/seed', [SourceController::class, 'seed']],
+    ['POST', '/sources/linkedin', [SourceController::class, 'addLinkedIn']],
     ['POST', '/sources/{id}/delete', [SourceController::class, 'delete']],
     ['POST', '/sources/{id}/toggle', [SourceController::class, 'toggle']],
     ['POST', '/parse', [SourceController::class, 'parse']],
