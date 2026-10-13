@@ -38,18 +38,24 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p runtime && cd runtime
-          # Берём самую свежую сборку PHP ${PHP_SERIES} с набором расширений "common"
-          pick() { curl -fsSL "$1" | grep -oE "$2" | sort -uV | tail -1; }
+          # Свежие сборки PHP ${PHP_SERIES} с набором расширений "common", от новой к старой:
+          # если сервер не отдаёт последнюю (бывает 5xx), берём предыдущую патч-версию.
+          versions() { curl -fsSL --retry 5 --retry-all-errors "$1" | grep -oE "$2" | sort -uV -r | head -4; }
+          fetch() { # каталог, шаблон, куда, распаковщик
+            for file in $(versions "$1" "$2"); do
+              if curl -fsSL --retry 4 --retry-all-errors --retry-delay 5 "$1$file" -o "$3.download"; then
+                echo "$3: $file"; mv "$3.download" "$3"; return 0
+              fi
+              echo "::warning::$file недоступен, пробую предыдущую версию"
+            done
+            echo "::error::Не удалось скачать рантайм по шаблону $2"; return 1
+          }
           for target in linux-x86_64 macos-aarch64 macos-x86_64; do
-            file=$(pick "$SPC_BASE/common/" "php-${PHP_SERIES}\.[0-9]+-micro-${target}\.tar\.gz")
-            test -n "$file" || { echo "::error::Не найден micro для $target"; exit 1; }
-            echo "$target: $file"
-            mkdir -p $target && curl -fsSL "$SPC_BASE/common/$file" | tar -xz -C $target
+            fetch "$SPC_BASE/common/" "php-${PHP_SERIES}\.[0-9]+-micro-${target}\.tar\.gz" "$target.tar.gz"
+            mkdir -p $target && tar -xzf "$target.tar.gz" -C $target
           done
-          file=$(pick "$SPC_BASE/windows/spc-max/" "php-${PHP_SERIES}\.[0-9]+-micro-win\.zip")
-          test -n "$file" || { echo "::error::Не найден micro для Windows"; exit 1; }
-          echo "windows: $file"
-          curl -fsSL "$SPC_BASE/windows/spc-max/$file" -o win.zip && mkdir -p windows && unzip -q win.zip -d windows
+          fetch "$SPC_BASE/windows/spc-max/" "php-${PHP_SERIES}\.[0-9]+-micro-win\.zip" win.zip
+          mkdir -p windows && unzip -q win.zip -d windows
           find . -name 'micro.sfx' -exec ls -la {} \;
       - name: Единые исполняемые файлы
         run: |

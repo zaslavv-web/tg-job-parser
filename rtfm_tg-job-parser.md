@@ -49,7 +49,7 @@ AI-режим писем: SDK Claude и Guzzle входят в сборку; д�
 | Новое правило скоринга | Строка типа `keywords` / `regex` / `list` | `config/pipeline.php` |
 | Новый тип правила | Класс `Scoring\ScoringRuleInterface` + строка в `scoring_rule_types` | `config/modules.php` |
 | Новый шаг фильтра / поменять порядок | Класс `Filter\FilterStepInterface` + строка в `filter_steps` и место в `steps` | `modules.php`, `pipeline.php` |
-| Новый источник (HH API, LinkedIn, почта…) | Класс `Source\SourceDriverInterface` + строка в `source_drivers` | `modules.php` |
+| Новый источник (HH API, почта…) | Класс `Source\SourceDriverInterface` + строка в `source_drivers` | `modules.php` |
 | Новый AI-провайдер | Класс `Letter\Generator\LetterGeneratorInterface` + строка в `letter_generators` | `modules.php` |
 | Реакция на событие (Slack, e-mail, CRM) | Класс `Kernel\ListenerInterface` + строка в `listeners` | `modules.php` |
 | Текст шаблонного письма | Фразы | `templates/letters/{ru,en}.php` |
@@ -92,6 +92,26 @@ src/Application          ParseService, ClassificationService, RescoreService, So
 src/Web                  роутер, контроллеры, сессия/CSRF, шаблоны в templates/
 tests/                   php tests/run.php — без зависимостей
 ```
+
+## LinkedIn
+Драйвер `src/Source/Driver/LinkedInDriver.php`, тип источника `linkedin`. Источник — один поиск LinkedIn
+(ссылка `linkedin.com/jobs/search/?…`; трекинговые параметры отбрасываются, сортировка — сначала новые).
+
+- Данные берутся из публичной гостевой выдачи (`jobs-guest/...`) — без логина, аккаунт не рискует.
+  Карточка поиска даёт заголовок, компанию, локацию, зарплату и дату; для новых вакансий открывается
+  страница с описанием и критериями (Seniority level, Employment type, Industries) и ссылкой Apply.
+- Текст собирается так, чтобы работал общий конвейер: заголовок первой строкой (анти-должности по заголовку),
+  `Company:`, `Location:`, `Workplace:` (из фильтра поиска «Remote/Hybrid/On-site», если выбран один), описание.
+  Поэтому LinkedIn использует тот же профиль, те же фильтры §3.3, скоринг §3.4 и письма — отдельной настройки нет.
+- Вакансии на английском → письма на английском: названия проектов и подпись берутся из `project_en` / `name_en`.
+- Лимиты: `config/app.php → linkedin` (страниц, описаний за проход, пауза между запросами,
+  `min_interval_minutes` = 120 — автопарсинг поиска не чаще; кнопка «Проверить все каналы» — без ограничения).
+  Ответ 429/999 от LinkedIn: если карточки уже получены — сохраняются без описаний, иначе у источника статус «ошибка»,
+  повтор при следующем автопарсинге.
+- Рекомендуемые поиски — данные в `config/profile.php → linkedin_searches` (keywords с OR, location,
+  workplace, experience, posted). Кнопка «Подключить рекомендуемые источники» / `seed`.
+- `.github/workflows/live-checks.yml` раз в неделю (и при изменении драйверов) прогоняет `tests/live/linkedin_live.php`
+  на живой выдаче — изменение разметки LinkedIn видно до того, как пользователь заметит пустую выдачу.
 
 ## Хранилище (ТЗ 4.3)
 | ТЗ | Здесь | Отличие |

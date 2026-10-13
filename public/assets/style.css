@@ -34,6 +34,7 @@ input[type=text], input[type=number], select, textarea { font: inherit; color: v
 .add-source { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .add-source input[name=input] { flex: 1; min-width: 240px; }
 .advanced { width: 100%; font-size: 13px; }
+.seed { display: block; margin: -4px 0 12px; }
 .advanced label, .advanced input { display: block; margin: 6px 0; width: 100%; max-width: 520px; }
 .table-scroll { overflow-x: auto; }
 .table { width: 100%; border-collapse: collapse; }

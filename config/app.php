@@ -37,6 +37,15 @@ return [
         'source_timeout_seconds' => 90,
     ],
 
+    // LinkedIn: гостевая выдача без логина. Бережём лимиты — иначе LinkedIn отвечает 429/999.
+    'linkedin' => [
+        'max_pages' => 3,                 // страниц выдачи (по 10–25 вакансий)
+        'max_details' => 15,              // сколько новых вакансий за проход открывать за описанием
+        'request_delay_ms' => 1500,       // пауза между запросами
+        'min_interval_minutes' => 120,    // автопарсинг одного поиска не чаще (ручная кнопка — без ограничения)
+        'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36',
+    ],
+
     'letters' => [
         'mode' => $env('LETTER_MODE') ?: 'template',   // режим по умолчанию
         'auto_generate' => true,                       // письмо для каждой подходящей вакансии при парсинге

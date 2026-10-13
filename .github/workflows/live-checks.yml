@@ -1,0 +1,23 @@
+name: Live checks
+
+# Проверка парсеров на живых сайтах. Отдельно от сборки: сбой внешнего сайта не блокирует релиз,
+# но сразу виден здесь (например, если LinkedIn поменял разметку).
+on:
+  push:
+    paths: ["src/Source/**", "config/**", "tests/live/**", ".github/workflows/live-checks.yml"]
+  schedule:
+    - cron: "17 6 * * 1"   # каждый понедельник
+  workflow_dispatch:
+
+jobs:
+  linkedin:
+    name: LinkedIn — живая выдача
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, dom, pdo_sqlite, curl
+          coverage: none
+      - run: php tests/live/linkedin_live.php

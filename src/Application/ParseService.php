@@ -54,6 +54,9 @@ final class ParseService
                 ? array_filter([$this->sources->find($onlySourceId)])
                 : $this->sources->active();
             foreach ($sources as $source) {
+                if ($trigger === 'cron' && $this->tooEarly($source)) {
+                    continue;
+                }
                 $this->parseSource($source, $report);
             }
         } finally {
@@ -64,6 +67,17 @@ final class ParseService
         $this->logger->info('Парсинг завершён', ['trigger' => $trigger, 'summary' => $report->summary()]);
 
         return $report;
+    }
+
+    /** Источник просит парситься не чаще min_interval_minutes (LinkedIn) — уважаем это в автопарсинге. */
+    private function tooEarly(Source $source): bool
+    {
+        $minutes = (int) $source->option('min_interval_minutes', 0);
+        if ($minutes <= 0 || $source->lastParsedAt === null || $source->status === Source::STATUS_ERROR) {
+            return false;
+        }
+
+        return strtotime($source->lastParsedAt) > $this->clock->now()->getTimestamp() - $minutes * 60;
     }
 
     private function parseSource(Source $source, ParseReport $report): void
