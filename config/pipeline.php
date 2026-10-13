@@ -50,7 +50,7 @@ return [
         ['id' => 'moscow_office', 'type' => 'keywords', 'points' => -25, 'label' => 'Офис в Москве без удалёнки',
             'patterns' => ['москв*', 'moscow', 'мск'], 'unless_list' => 'remote_markers'],
         ['id' => 'junior_experience', 'type' => 'regex', 'points' => -20, 'label' => 'Требуемый опыт < 2 лет',
-            'patterns' => ['/опыт\w*[^.\n]{0,30}?(от|не менее)\s*(0|1|одного|года|полугода)\b(?!\s*[-–—]?\s*\d)/iu', '/\b[01]\+?\s*(year|years|год|года)\b/iu', '/без опыта/iu', '/no experience required/iu']],
+            'patterns' => ['/опыт\w*[^.\n]{0,30}?(от|не менее)\s*(0|1|одного|года|полугода)\b(?!\s*[-–—]?\s*\d)/iu', '/(experience|опыт)[^.\n]{0,40}?\b[01]\+?\s*(years?|год|года)\b/iu', '/\b[01]\+?\s*(years?|год|года)\b[^.\n]{0,25}(experience|опыт)/iu', '/без опыта/iu', '/no experience required/iu']],
         ['id' => 'hard_tech', 'type' => 'list', 'list' => 'hard_tech_requirements', 'points' => -15, 'label' => 'Требуется глубокая техническая экспертиза'],
     ],
 

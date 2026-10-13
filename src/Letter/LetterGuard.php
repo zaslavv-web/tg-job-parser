@@ -90,7 +90,7 @@ final class LetterGuard
 
     private function withoutSignature(string $text, LetterRequest $request): string
     {
-        foreach (['name', 'phone', 'telegram'] as $key) {
+        foreach (['name', 'name_en', 'phone', 'telegram'] as $key) {
             $value = $request->profile->contact($key);
             if ($value !== '') {
                 $text = str_replace($value, '', $text);
@@ -110,7 +110,8 @@ final class LetterGuard
         if ($missing === []) {
             return $text;
         }
-        $name = str_contains($text, $profile->contact('name')) ? '' : $profile->contact('name') . "\n";
+        $fullName = $request->language === 'en' ? ($profile->contact('name_en') ?: $profile->contact('name')) : $profile->contact('name');
+        $name = str_contains($text, $profile->contact('name')) || str_contains($text, $fullName) ? '' : $fullName . "\n";
 
         return rtrim($text) . "\n\n" . $name . implode(', ', array_filter([$profile->contact('phone'), $profile->contact('telegram')]));
     }

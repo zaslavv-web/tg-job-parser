@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace TgJobParser\Cli\Command;
 
-use TgJobParser\Application\SourceService;
+use TgJobParser\Application\SeedService;
 use TgJobParser\Cli\CommandInterface;
 use TgJobParser\Cli\Input;
 use TgJobParser\Cli\Output;
-use TgJobParser\Kernel\Config;
 
-/** Подключает каналы из ТЗ (раздел 10). Повторный запуск безопасен. */
+/** Подключает каналы из ТЗ и рекомендуемые поиски LinkedIn. Повторный запуск безопасен. */
 final class SeedCommand implements CommandInterface
 {
-    public function __construct(private readonly SourceService $service, private readonly Config $config)
+    public function __construct(private readonly SeedService $seeds)
     {
     }
 
@@ -24,18 +23,17 @@ final class SeedCommand implements CommandInterface
 
     public function description(): string
     {
-        return 'Подключить рекомендуемые каналы из ТЗ';
+        return 'Подключить рекомендуемые источники (каналы из ТЗ + поиски LinkedIn)';
     }
 
     public function run(Input $input, Output $output): int
     {
-        foreach ($this->config->array('seed_sources') as $handle) {
-            try {
-                $this->service->add((string) $handle);
-                $output->line("+ {$handle}");
-            } catch (\InvalidArgumentException $e) {
-                $output->line("= {$handle} ({$e->getMessage()})");
-            }
+        $result = $this->seeds->seed();
+        foreach ($result['added'] as $name) {
+            $output->line("+ {$name}");
+        }
+        foreach ($result['skipped'] as $line) {
+            $output->line("= {$line}");
         }
 
         return 0;

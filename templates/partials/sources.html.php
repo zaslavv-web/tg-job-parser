@@ -3,7 +3,7 @@
     <h2>Каналы и источники</h2>
     <form method="post" action="/sources" class="add-source">
         <input type="hidden" name="_token" value="<?= $e($csrf) ?>">
-        <input type="text" name="input" placeholder="@username, t.me/…, RSS или сайт с вакансиями" required>
+        <input type="text" name="input" placeholder="@username, t.me/…, поиск LinkedIn, RSS или сайт с вакансиями" required>
         <select name="kind" title="Тип источника">
             <option value="auto">Тип: авто</option>
             <?php foreach ($drivers as $kind => $driver): ?>
@@ -19,12 +19,16 @@
             <input type="text" name="link_pattern" placeholder="Regex ссылок на вакансии, напр. ~/jobs/\d+~">
         </details>
     </form>
+    <form method="post" action="/sources/seed" class="inline seed" data-busy="Подключаю…">
+        <input type="hidden" name="_token" value="<?= $e($csrf) ?>">
+        <button class="btn btn--small" title="Каналы из ТЗ и поиски LinkedIn по вашему профилю; уже подключённые пропускаются">＋ Подключить рекомендуемые источники</button>
+    </form>
     <?php if ($sources): ?>
     <div class="table-scroll"><table class="table">
         <thead><tr><th>Источник</th><th>Тип</th><th>Статус</th><th>Последний парсинг</th><th></th></tr></thead>
         <?php foreach ($sources as $s): ?>
             <tr>
-                <td><a href="<?= $e($s->url ?? '#') ?>" target="_blank" rel="noopener"><?= $e($s->kind === 'telegram' ? '@' . $s->handle : $s->displayName()) ?></a>
+                <td><a href="<?= $e($s->url ?? '#') ?>" target="_blank" rel="noopener"><?= $e($s->kind === 'telegram' ? '@' . $s->handle : mb_strimwidth($s->displayName(), 0, 110, '…')) ?></a>
                     <?php if ($s->title && $s->kind === 'telegram'): ?><div class="muted small"><?= $e($s->title) ?></div><?php endif ?></td>
                 <td><?= $e(($drivers[$s->kind] ?? null)?->label() ?? $s->kind) ?></td>
                 <td>

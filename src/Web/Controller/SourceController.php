@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TgJobParser\Web\Controller;
 
 use TgJobParser\Application\ParseService;
+use TgJobParser\Application\SeedService;
 use TgJobParser\Application\SourceService;
 use TgJobParser\Web\Request;
 use TgJobParser\Web\Response;
@@ -12,8 +13,12 @@ use TgJobParser\Web\Session;
 
 final class SourceController extends BaseController
 {
-    public function __construct(Session $session, private readonly SourceService $sources, private readonly ParseService $parser)
-    {
+    public function __construct(
+        Session $session,
+        private readonly SourceService $sources,
+        private readonly ParseService $parser,
+        private readonly SeedService $seeds,
+    ) {
         parent::__construct($session);
     }
 
@@ -27,6 +32,16 @@ final class SourceController extends BaseController
         ]);
 
         return $this->done($request, "Источник добавлен: {$source->displayName()}", ['id' => $source->id], '/#sources');
+    }
+
+    public function seed(Request $request): Response
+    {
+        $result = $this->seeds->seed();
+        $message = $result['added']
+            ? 'Подключено источников: ' . count($result['added']) . '. Нажмите «Проверить все каналы».'
+            : 'Все рекомендуемые источники уже подключены';
+
+        return $this->done($request, $message, $result, '/#sources');
     }
 
     public function delete(Request $request, string $id): Response

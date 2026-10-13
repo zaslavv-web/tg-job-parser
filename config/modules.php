@@ -26,6 +26,7 @@ return [
     'source_drivers' => [
         'telegram' => Driver\TelegramPublicDriver::class,
         'telethon' => Driver\TelethonDriver::class,
+        'linkedin' => Driver\LinkedInDriver::class,   // раньше web: ссылки linkedin.com/jobs — это поиск, а не сайт
         'rss' => Driver\RssDriver::class,
         'web' => Driver\WebPageDriver::class,
     ],

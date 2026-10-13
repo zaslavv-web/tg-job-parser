@@ -119,4 +119,13 @@ final class WebTest extends TestCase
         $this->assertSame(401, $kernel->handle(new Request('GET', '/'))->status);
         $this->assertSame(200, $kernel->handle(new Request('GET', '/', [], [], ['PHP_AUTH_PW' => 's3cret']))->status);
     }
+
+    public function testSeedButtonConnectsRecommendedSources(): void
+    {
+        $this->post('/sources/seed', []);
+        $page = $this->kernel->handle(new Request('GET', '/'))->body;
+        $this->assertContains('Подключено источников:', $page);
+        $this->assertContains('LinkedIn: ', $page);
+        $this->assertContains('@productstar', $page);
+    }
 }

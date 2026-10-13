@@ -65,8 +65,9 @@ final class TemplateLetterGenerator implements LetterGeneratorInterface
             : $phrases['generic_interest'];
 
         $resultKey = $lang === 'en' ? 'result_en' : 'result_ru';
+        $projectKey = $lang === 'en' ? 'project_en' : 'project';
         $caseLines = array_map(
-            static fn (array $case): string => strtr($phrases['case_line'], ['{project}' => $case['project'], '{result}' => $case[$resultKey] ?? $case['result_ru']]),
+            static fn (array $case): string => strtr($phrases['case_line'], ['{project}' => $case[$projectKey] ?? $case['project'], '{result}' => $case[$resultKey] ?? $case['result_ru']]),
             $cases,
         );
 
@@ -85,7 +86,8 @@ final class TemplateLetterGenerator implements LetterGeneratorInterface
             }
         }
         $parts[] = $phrases['call_to_action'];
-        $parts[] = $profile->contact('name') . "\n" . $profile->contact('phone') . ', ' . $profile->contact('telegram');
+        $name = $lang === 'en' ? ($profile->contact('name_en') ?: $profile->contact('name')) : $profile->contact('name');
+        $parts[] = $name . "\n" . $profile->contact('phone') . ', ' . $profile->contact('telegram');
 
         return implode("\n\n", array_filter($parts, static fn (string $p): bool => trim($p) !== ''));
     }

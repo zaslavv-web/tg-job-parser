@@ -16,6 +16,7 @@
 return [
     'candidate' => [
         'name' => 'Владимир Заслав',
+        'name_en' => 'Vladimir Zaslav',      // подпись в письмах на английском
         'phone' => '+7(926) 9882199',
         'telegram' => '@VladimirZaslav',
         'pet_project' => 'growth-peak.pro',
@@ -138,6 +139,29 @@ return [
         'letter_requirements' => [],
     ],
 
+    /*
+     * Рекомендуемые поиски LinkedIn (кнопка «Подключить рекомендуемые источники» / bin seed).
+     * Это только «сито» на стороне LinkedIn — отбор, скоринг и письма те же, что для Telegram.
+     * workplace: remote | hybrid | onsite (можно несколько через запятую);
+     * experience: mid-senior, director, executive (LinkedIn «Seniority level»); posted: day | week | month.
+     */
+    'linkedin_searches' => [
+        ['keywords' => '"Head of Product" OR CPO OR "Chief Product Officer" OR "Director of Product" OR "VP of Product" OR "VP Product"',
+            'location' => 'Worldwide', 'workplace' => 'remote', 'experience' => 'director,executive', 'posted' => 'week'],
+        ['keywords' => '"Senior Product Manager" OR "Lead Product Manager" OR "Group Product Manager" OR "Principal Product Manager" OR "Product Lead"',
+            'location' => 'Worldwide', 'workplace' => 'remote', 'experience' => 'mid-senior,director', 'posted' => 'week'],
+        ['keywords' => '"Product Manager" OR "Product Owner" OR "Head of Product" OR CPO',
+            'location' => 'Kazakhstan', 'workplace' => 'remote,hybrid,onsite', 'experience' => 'mid-senior,director,executive', 'posted' => 'week'],
+        ['keywords' => '"Product Manager" OR "Head of Product" OR "Director of Product" OR CPO',
+            'location' => 'United Arab Emirates', 'workplace' => 'hybrid,onsite', 'experience' => 'mid-senior,director,executive', 'posted' => 'week'],
+        ['keywords' => '"Product Manager" OR "Head of Product" OR CPO',
+            'location' => 'Cyprus', 'workplace' => 'remote,hybrid,onsite', 'experience' => 'mid-senior,director,executive', 'posted' => 'week'],
+        ['keywords' => '"Product Manager" OR "Head of Product" OR CPO',
+            'location' => 'Tbilisi', 'workplace' => 'remote,hybrid,onsite', 'experience' => 'mid-senior,director,executive', 'posted' => 'week'],
+        ['keywords' => '"Head of Product" OR "Senior Product Manager" OR "Director of Product"',
+            'location' => 'European Union', 'workplace' => 'remote', 'experience' => 'mid-senior,director,executive', 'posted' => 'week'],
+    ],
+
     // Какие списки можно пополнять из UI — и как они там называются
     'editable_lists' => [
         'vacancy_markers' => 'Ключевые слова — маркеры вакансии',
@@ -158,6 +182,7 @@ return [
     'experience' => [
         [
             'id' => 'antiplagiat',
+            'project_en' => 'Antiplagiat',
             'project' => 'Антиплагиат',
             'result_ru' => 'запустил MVP AI-детекции, прогноз ×2 cashflow',
             'result_en' => 'launched an AI-detection MVP with a forecast of 2x cashflow',
@@ -165,6 +190,7 @@ return [
         ],
         [
             'id' => 'ais',
+            'project_en' => 'AIS',
             'project' => 'АИС',
             'result_ru' => 'перевёл продукт на рыночные решения, экономия 15 млн ₽',
             'result_en' => 'moved the product to market solutions, saving 15M RUB',
@@ -172,6 +198,7 @@ return [
         ],
         [
             'id' => 'rzd',
+            'project_en' => 'Russian Railways (RZD)',
             'project' => 'РЖД',
             'result_ru' => '4 проекта на 230 млн ₽, HR-tech с VR за 3 месяца, 30 000 MAU',
             'result_en' => '4 projects worth 230M RUB, an HR-tech VR product in 3 months, 30,000 MAU',
@@ -179,6 +206,7 @@ return [
         ],
         [
             'id' => 'pooling',
+            'project_en' => 'Pooling',
             'project' => 'Pooling',
             'result_ru' => '+10% к обороту за 1 месяц разработки',
             'result_en' => '+10% turnover after one month of development',
@@ -186,6 +214,7 @@ return [
         ],
         [
             'id' => 'neurocity',
+            'project_en' => 'NeuroCity',
             'project' => 'NeuroCity',
             'result_ru' => 'пилот в фудмолле «Депо», 20% заказов точки',
             'result_en' => 'a pilot in the "Depo" food mall with 20% of the venue\'s orders',
@@ -193,6 +222,7 @@ return [
         ],
         [
             'id' => 'sep',
+            'project_en' => 'SEP',
             'project' => 'СЭП',
             'result_ru' => 'вывел 250+ клиентов из долгов, 90% кредитных организаций на платформе, работа с Минфином и ЦБ, продукт стал основой для закона',
             'result_en' => 'helped 250+ clients out of debt, onboarded 90% of credit institutions, worked with the Ministry of Finance and the Central Bank; the product became the basis for a law',
@@ -200,6 +230,7 @@ return [
         ],
         [
             'id' => 'saas_marketplaces',
+            'project_en' => 'SaaS for marketplace sellers',
             'project' => 'SaaS для маркетплейсов',
             'result_ru' => '×2 LTV, рост Retention и Conversion',
             'result_en' => '2x LTV, improved retention and conversion',
@@ -207,6 +238,7 @@ return [
         ],
         [
             'id' => 'career_track',
+            'project_en' => 'Career Track OS',
             'project' => 'Career Track OS',
             'result_ru' => 'HR-платформа из 16 модулей, построенная с AI-разработкой',
             'result_en' => 'an HR platform of 16 modules built with AI-assisted development',

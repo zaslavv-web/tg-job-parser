@@ -57,7 +57,7 @@ final class LetterTest extends TestCase
     {
         $text = $this->app->get(TemplateLetterGenerator::class)->generate($this->request('Senior PM for fintech payments platform, B2B', 'en', 'Senior Product Manager', null));
         $this->assertContains("I'm applying for the Senior Product Manager role.", $text);
-        $this->assertContains('СЭП', $text, 'финтех-кейс');
+        $this->assertContains('SEP:', $text, 'финтех-кейс');
         $this->assertNotContains('growth-peak.pro', $text, 'не про AI — без пет-проекта');
     }
 

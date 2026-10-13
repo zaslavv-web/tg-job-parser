@@ -23,14 +23,14 @@ final class PromptBuilder
             : '- нет';
         $vars = [
             '{language}' => $language,
-            '{name}' => $profile->contact('name'),
+            '{name}' => $request->language === 'en' ? ($profile->contact('name_en') ?: $profile->contact('name')) : $profile->contact('name'),
             '{phone}' => $profile->contact('phone'),
             '{telegram}' => $profile->contact('telegram'),
             '{pet_project}' => $profile->contact('pet_project'),
             '{resume}' => $this->resume($request),
             '{vacancy}' => mb_substr($request->vacancyText, 0, 6000),
             '{requirements}' => $requirements,
-            '{focus_cases}' => implode(', ', array_map(static fn (array $c): string => (string) $c['project'], $request->cases)),
+            '{focus_cases}' => implode(', ', array_map(static fn (array $c): string => (string) ($request->language === 'en' ? ($c['project_en'] ?? $c['project']) : $c['project']), $request->cases)),
         ];
 
         return ['system' => trim(strtr($system, $vars)), 'user' => trim(strtr($user, $vars))];
@@ -41,7 +41,8 @@ final class PromptBuilder
         $key = $request->language === 'en' ? 'result_en' : 'result_ru';
         $lines = [];
         foreach ($request->profile->experience as $case) {
-            $lines[] = sprintf('- %s: %s', $case['project'], $case[$key] ?? $case['result_ru']);
+            $project = $request->language === 'en' ? ($case['project_en'] ?? $case['project']) : $case['project'];
+            $lines[] = sprintf('- %s: %s', $project, $case[$key] ?? $case['result_ru']);
         }
         $pet = $request->profile->petProject[$request->language === 'en' ? 'text_en' : 'text_ru'] ?? '';
         if ($pet !== '') {
