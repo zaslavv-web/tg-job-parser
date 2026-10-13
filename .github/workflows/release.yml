@@ -112,16 +112,30 @@ jobs:
       - uses: actions/checkout@v4
       - name: Версия
         id: version
-        run: echo "tag=v$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(tr -d '[:space:]' < VERSION)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # Опубликованный релиз не перезаписываем: новая сборка = новый номер в VERSION
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Релиз $tag уже опубликован и не будет изменён. Чтобы выпустить новую версию, увеличьте номер в файле VERSION."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/download-artifact@v4
+        if: steps.version.outputs.exists == 'false'
         with:
           name: executables
           path: out
       - name: Упаковка macOS/Linux (сохранить права на запуск)
+        if: steps.version.outputs.exists == 'false'
         run: |
           cd out
           for f in TgJobParser-macos-arm64 TgJobParser-macos-x64 TgJobParser-linux-x64; do chmod +x $f && zip -q $f.zip $f; done
       - uses: softprops/action-gh-release@v2
+        if: steps.version.outputs.exists == 'false'
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
