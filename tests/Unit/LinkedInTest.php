@@ -31,6 +31,7 @@ final class LinkedInTest extends TestCase
     {
         $this->http = (new FakeHttpClient())
             ->on('~seeMoreJobPostings/search\?.*start=0~', self::fixture('linkedin_search.html'))
+            ->on('~seeMoreJobPostings/search\?.*start=3~', '')
             ->on('~jobPosting/4012345678$~', self::fixture('linkedin_posting.html'))
             ->on('~jobPosting/\d+$~', '<html><body><div class="show-more-less-html__markup">Short description.</div></body></html>');
     }
@@ -97,8 +98,10 @@ final class LinkedInTest extends TestCase
 
         $detailRequests = array_filter($this->http->requests, static fn (array $r): bool => str_contains($r['url'], 'jobPosting/'));
         $this->assertSame(2, count($detailRequests), 'известная вакансия не скачивается повторно');
-        $this->assertContains('start=0', $this->http->requests[0]['url']);
-        $this->assertSame(1, count(array_filter($this->http->requests, static fn (array $r): bool => str_contains($r['url'], 'seeMore'))), 'неполная страница — дальше не листаем');
+        $searchUrls = array_values(array_map(static fn (array $r): string => $r['url'], array_filter($this->http->requests, static fn (array $r): bool => str_contains($r['url'], 'seeMore'))));
+        $this->assertContains('start=0', $searchUrls[0]);
+        $this->assertContains('start=3', $searchUrls[1] ?? '', 'следующая страница — со смещением на фактическое число карточек');
+        $this->assertSame(2, count($searchUrls), 'пустая страница — конец выдачи');
     }
 
     public function testRateLimitIsReportedClearlyOrReturnsPartialResult(): void
@@ -154,7 +157,7 @@ final class LinkedInTest extends TestCase
         $app->get(ParseService::class)->run('cron');
         $this->assertSame($before, $searches($this->http), 'автопарсинг не дёргает LinkedIn раньше min_interval_minutes');
         $app->get(ParseService::class)->run('manual');
-        $this->assertSame($before + 1, $searches($this->http), 'кнопка «Проверить все» работает всегда');
+        $this->assertSame($before + 2, $searches($this->http), 'кнопка «Проверить все» работает всегда');
     }
 
     public function testRecommendedSearchesAreValidAndSeedingIsIdempotent(): void

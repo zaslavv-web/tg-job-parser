@@ -30,7 +30,6 @@ final class LinkedInDriver implements SourceDriverInterface
     private const SEARCH_PATH = '/jobs/search';
     private const GUEST_SEARCH = 'https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search';
     private const GUEST_POSTING = 'https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/';
-    private const PAGE_SIZE = 25;
 
     /** Параметры поиска LinkedIn, которые сохраняем (остальное — трекинг) */
     private const KEEP_PARAMS = ['keywords', 'location', 'geoId', 'f_WT', 'f_E', 'f_TPR', 'f_JT', 'f_SB2', 'f_C', 'f_I', 'distance', 'sortBy'];
@@ -85,11 +84,13 @@ final class LinkedInDriver implements SourceDriverInterface
 
         $cards = [];
         $limited = null;
+        $offset = 0;
         for ($page = 0; $page < $maxPages; $page++) {
             if ($page > 0) {
                 ($this->pause)($delay);
             }
-            $response = $this->http->get(self::GUEST_SEARCH . '?' . http_build_query($params + ['start' => $page * self::PAGE_SIZE]), $this->headers());
+            // Размер страницы гостевой выдачи плавает (10–25) — смещаемся на фактическое число карточек
+            $response = $this->http->get(self::GUEST_SEARCH . '?' . http_build_query($params + ['start' => $offset]), $this->headers());
             if (in_array($response->status, [429, 999], true)) {
                 $limited = $response->status;
                 break;
@@ -98,15 +99,14 @@ final class LinkedInDriver implements SourceDriverInterface
                 throw new RuntimeException("LinkedIn вернул HTTP {$response->status}");
             }
             $found = self::parseSearch($response->body);
-            if ($found === []) {
-                break;
-            }
+            $before = count($cards);
             foreach ($found as $card) {
                 $cards[$card['id']] ??= $card;
             }
-            if (count($found) < self::PAGE_SIZE) {
-                break;
+            if ($found === [] || count($cards) === $before) {
+                break; // конец выдачи или LinkedIn вернул ту же страницу
             }
+            $offset += count($found);
         }
         if ($cards === [] && $limited !== null) {
             throw new RuntimeException("LinkedIn временно ограничил запросы (HTTP {$limited}) — попробуем при следующем автопарсинге");
